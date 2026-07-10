@@ -2,73 +2,196 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Chest Snake</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake Apex</title>
     <style>
         body {
             background-color: #2c2c2c;
             color: #fff;
-            font-family: monospace;
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
         }
+
+        /* Start Screen Overlay */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(20, 20, 20, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+        .title-animate {
+            font-size: 36px;
+            font-weight: bold;
+            color: #55FF55;
+            text-shadow: 3px 3px #005500;
+            margin-bottom: 30px;
+            animation: bounce 0.8s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+
+        /* Minecraft Styled Button */
+        .mc-btn {
+            background-color: #4a4a4a;
+            border: 3px solid;
+            border-color: #8b8b8b #000 #000 #8b8b8b;
+            color: #e0e0e0;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-family: inherit;
+            cursor: pointer;
+            text-shadow: 2px 2px #222;
+        }
+        .mc-btn:active {
+            border-color: #000 #8b8b8b #8b8b8b #000;
+            color: #ffff55;
+            padding-top: 14px; padding-bottom: 10px;
+        }
+
         #ui-header {
-            font-size: 20px;
+            font-size: 22px;
             margin-bottom: 10px;
-            color: #4a4a4a;
-            text-shadow: 1px 1px #000;
+            font-weight: bold;
+            text-shadow: 2px 2px #000;
         }
+
         /* 9x9 Chest Grid */
         #chest-grid {
             display: grid;
-            grid-template-columns: repeat(9, 45px);
-            grid-template-rows: repeat(9, 45px);
+            grid-template-columns: repeat(9, 38px);
+            grid-template-rows: repeat(9, 38px);
             gap: 2px;
             background-color: #8b8b8b;
-            padding: 10px;
+            padding: 8px;
             border: 4px solid #373737;
         }
         .slot {
             background-color: #8b8b8b;
-            border: 3px solid;
-            border-color: #373737 #fff #fff #373737; /* Minecraft slot shadow effect */
+            border: 2px solid;
+            border-color: #373737 #fff #fff #373737;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            user-select: none;
+            font-size: 22px;
         }
         .wall { background-color: #111; border-color: #222; }
+
+        /* On-Screen Mobile Controls */
+        #controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 65px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            justify-content: center;
+        }
+        .ctrl-btn {
+            background-color: #555;
+            border: 3px solid;
+            border-color: #8b8b8b #222 #222 #8b8b8b;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .ctrl-btn:active {
+            background-color: #333;
+            border-color: #222 #8b8b8b #8b8b8b #222;
+        }
+        #btn-up { grid-column: 2; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+
+        /* Custom Popup Modal */
+        #popup-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.7);
+            background-color: #4a4a4a;
+            border: 4px solid #000;
+            padding: 20px;
+            text-align: center;
+            z-index: 20;
+            box-shadow: 0 0 20px rgba(0,0,0,0.7);
+            opacity: 0;
+            transition: all 0.2s ease-out;
+        }
+        #popup-modal.show {
+            display: block;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        #popup-modal h2 { margin-top: 0; color: #ff5555; text-shadow: 2px 2px #000;}
+        #popup-modal p { font-size: 18px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <div class="title-animate">SNAKE APEX</div>
+        <button class="mc-btn" onclick="startGame()">OPEN CHEST</button>
+    </div>
+
+    <!-- Main Game UI -->
     <div id="ui-header">Chest - Score: <span id="score">0</span></div>
     <div id="chest-grid"></div>
+
+    <!-- D-Pad Controls for Mobile/App -->
+    <div id="controls">
+        <div class="ctrl-btn" id="btn-up">▲</div>
+        <div class="ctrl-btn" id="btn-left">◀</div>
+        <div class="ctrl-btn" id="btn-down">▼</div>
+        <div class="ctrl-btn" id="btn-right">▶</div>
+    </div>
+
+    <!-- Animated Popup Modal -->
+    <div id="popup-modal">
+        <h2>GAME OVER</h2>
+        <p>Final Score: <span id="final-score">0</span></p>
+        <button class="mc-btn" onclick="closePopup()">RESPAWN</button>
+    </div>
 
 <script>
     const GRID_SIZE = 9;
     const gridEl = document.getElementById('chest-grid');
     const scoreEl = document.getElementById('score');
+    const modalEl = document.getElementById('popup-modal');
+    const finalScoreEl = document.getElementById('final-score');
     
-    // Game State
     let snake = [{x: 4, y: 4}];
-    let direction = {x: 0, y: -1}; // Start moving up
+    let direction = {x: 0, y: -1}; 
     let food = {x: 2, y: 2, type: '🍎'};
     let score = 0;
     let gameInterval;
+    let gameActive = false;
 
     const foodTypes = [
-        { icon: '🍎', growth: 1, points: 1 },  // Apple
-        { icon: '🥕', growth: 2, points: 3 },  // Golden Carrot
-        { icon: '🥩', growth: 3, points: 5 }   // Steak
+        { icon: '🍎', growth: 1, points: 1 }, 
+        { icon: '🥕', growth: 2, points: 3 }, 
+        { icon: '🥩', growth: 3, points: 5 }  
     ];
 
-    // Create the Chest Grid UI
     function createGrid() {
         gridEl.innerHTML = '';
         for (let y = 0; y < GRID_SIZE; y++) {
@@ -76,8 +199,6 @@
                 const slot = document.createElement('div');
                 slot.classList.add('slot');
                 slot.id = `cell-${x}-${y}`;
-                
-                // Make edges look like bedrock walls
                 if (x === 0 || x === GRID_SIZE - 1 || y === 0 || y === GRID_SIZE - 1) {
                     slot.classList.add('wall');
                     slot.innerText = '⬛'; 
@@ -88,18 +209,14 @@
     }
 
     function draw() {
-        // Clear old slots (except walls)
         document.querySelectorAll('.slot:not(.wall)').forEach(slot => slot.innerText = '');
-
-        // Draw Food
         const foodSlot = document.getElementById(`cell-${food.x}-${food.y}`);
         if (foodSlot) foodSlot.innerText = food.type;
 
-        // Draw Snake
         snake.forEach((segment, index) => {
             const snakeSlot = document.getElementById(`cell-${segment.x}-${segment.y}`);
             if (snakeSlot) {
-                snakeSlot.innerText = index === 0 ? '🤖' : '🟩'; // Head and body placeholders
+                snakeSlot.innerText = index === 0 ? '🟩' : '🟢'; 
             }
         });
     }
@@ -110,7 +227,6 @@
         while (!newFood) {
             let x = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
             let y = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
-            // Ensure food doesn't spawn on snake
             if (!snake.some(s => s.x === x && s.y === y)) {
                 newFood = { x, y, type: typeObj.icon, config: typeObj };
             }
@@ -119,64 +235,92 @@
     }
 
     function move() {
+        if (!gameActive) return;
         const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
-        // Wall Collision
-        if (head.x === 0 || head.x === GRID_SIZE - 1 || head.y === 0 || head.y === GRID_SIZE - 1) {
-            return gameOver();
-        }
-        // Self Collision
-        if (snake.some(s => s.x === head.x && s.y === head.y)) {
-            return gameOver();
+        if (head.x === 0 || head.x === GRID_SIZE - 1 || head.y === 0 || head.y === GRID_SIZE - 1 || snake.some(s => s.x === head.x && s.y === head.y)) {
+            return triggerGameOver();
         }
 
         snake.unshift(head);
 
-        // Check if food eaten
         if (head.x === food.x && head.y === food.y) {
             score += food.config ? food.config.points : 1;
             scoreEl.innerText = score;
-            
-            // Handle different growth rates
             let growth = food.config ? food.config.growth : 1;
             for (let i = 1; i < growth; i++) {
-                snake.push({ ...snake[snake.length - 1] }); // Add extra body pieces
+                snake.push({ ...snake[snake.length - 1] });
             }
-            
             spawnFood();
         } else {
             snake.pop();
         }
-
         draw();
     }
 
-    function gameOver() {
+    function changeDirection(x, y) {
+        if (!gameActive) return;
+        // Block 180 degree turns
+        if (x !== 0 && direction.x === 0) direction = { x, y: 0 };
+        if (y !== 0 && direction.y === 0) direction = { x: 0, y };
+    }
+
+    function triggerGameOver() {
+        gameActive = false;
         clearInterval(gameInterval);
-        alert(`Game Over! Final Score: ${score}`);
-        // Reset
+        finalScoreEl.innerText = score;
+        modalEl.style.display = 'block';
+        setTimeout(() => modalEl.classList.add('show'), 10);
+    }
+
+    function closePopup() {
+        modalEl.classList.remove('show');
+        setTimeout(() => { modalEl.style.display = 'none'; }, 200);
+        resetGame();
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('start-screen').style.display = 'none';
+            resetGame();
+        }, 500);
+    }
+
+    function resetGame() {
         snake = [{x: 4, y: 4}];
         direction = {x: 0, y: -1};
         score = 0;
         scoreEl.innerText = score;
+        gameActive = true;
         spawnFood();
-        gameInterval = setInterval(move, 250);
+        draw();
+        clearInterval(gameInterval);
+        gameInterval = setInterval(move, 280);
     }
 
-    // Input Handling
+    // Keyboard controls
     window.addEventListener('keydown', e => {
-        switch (e.key) {
-            case 'ArrowUp':    if (direction.y === 0) direction = { x: 0, y: -1 }; break;
-            case 'ArrowDown':  if (direction.y === 0) direction = { x: 0, y: 1 }; break;
-            case 'ArrowLeft':  if (direction.x === 0) direction = { x: -1, y: 0 }; break;
-            case 'ArrowRight': if (direction.x === 0) direction = { x: 1, y: 0 }; break;
-        }
+        if (e.key === 'ArrowUp') changeDirection(0, -1);
+        if (e.key === 'ArrowDown') changeDirection(0, 1);
+        if (e.key === 'ArrowLeft') changeDirection(-1, 0);
+        if (e.key === 'ArrowRight') changeDirection(1, 0);
     });
 
-    // Start Game
+    // Mobile Button Controls
+    document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); changeDirection(0, -1); });
+    document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); changeDirection(0, 1); });
+    document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); changeDirection(-1, 0); });
+    document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); changeDirection(1, 0); });
+    
+    // Fallback clicks for testing on desktop
+    document.getElementById('btn-up').addEventListener('click', () => changeDirection(0, -1));
+    document.getElementById('btn-down').addEventListener('click', () => changeDirection(0, 1));
+    document.getElementById('btn-left').addEventListener('click', () => changeDirection(-1, 0));
+    document.getElementById('btn-right').addEventListener('click', () => changeDirection(1, 0));
+
     createGrid();
-    spawnFood();
-    gameInterval = setInterval(move, 250); // Speed: 250ms per tick
 </script>
 </body>
-</html>
+        </html>
+        
