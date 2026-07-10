@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Chest Snake</title>
+    <style>
+        body {
+            background-color: #2c2c2c;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #ui-header {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #4a4a4a;
+            text-shadow: 1px 1px #000;
+        }
+        /* 9x9 Chest Grid */
+        #chest-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 45px);
+            grid-template-rows: repeat(9, 45px);
+            gap: 2px;
+            background-color: #8b8b8b;
+            padding: 10px;
+            border: 4px solid #373737;
+        }
+        .slot {
+            background-color: #8b8b8b;
+            border: 3px solid;
+            border-color: #373737 #fff #fff #373737; /* Minecraft slot shadow effect */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            user-select: none;
+        }
+        .wall { background-color: #111; border-color: #222; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-header">Chest - Score: <span id="score">0</span></div>
+    <div id="chest-grid"></div>
+
+<script>
+    const GRID_SIZE = 9;
+    const gridEl = document.getElementById('chest-grid');
+    const scoreEl = document.getElementById('score');
+    
+    // Game State
+    let snake = [{x: 4, y: 4}];
+    let direction = {x: 0, y: -1}; // Start moving up
+    let food = {x: 2, y: 2, type: '🍎'};
+    let score = 0;
+    let gameInterval;
+
+    const foodTypes = [
+        { icon: '🍎', growth: 1, points: 1 },  // Apple
+        { icon: '🥕', growth: 2, points: 3 },  // Golden Carrot
+        { icon: '🥩', growth: 3, points: 5 }   // Steak
+    ];
+
+    // Create the Chest Grid UI
+    function createGrid() {
+        gridEl.innerHTML = '';
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const slot = document.createElement('div');
+                slot.classList.add('slot');
+                slot.id = `cell-${x}-${y}`;
+                
+                // Make edges look like bedrock walls
+                if (x === 0 || x === GRID_SIZE - 1 || y === 0 || y === GRID_SIZE - 1) {
+                    slot.classList.add('wall');
+                    slot.innerText = '⬛'; 
+                }
+                gridEl.appendChild(slot);
+            }
+        }
+    }
+
+    function draw() {
+        // Clear old slots (except walls)
+        document.querySelectorAll('.slot:not(.wall)').forEach(slot => slot.innerText = '');
+
+        // Draw Food
+        const foodSlot = document.getElementById(`cell-${food.x}-${food.y}`);
+        if (foodSlot) foodSlot.innerText = food.type;
+
+        // Draw Snake
+        snake.forEach((segment, index) => {
+            const snakeSlot = document.getElementById(`cell-${segment.x}-${segment.y}`);
+            if (snakeSlot) {
+                snakeSlot.innerText = index === 0 ? '🤖' : '🟩'; // Head and body placeholders
+            }
+        });
+    }
+
+    function spawnFood() {
+        const typeObj = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        let newFood;
+        while (!newFood) {
+            let x = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
+            let y = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
+            // Ensure food doesn't spawn on snake
+            if (!snake.some(s => s.x === x && s.y === y)) {
+                newFood = { x, y, type: typeObj.icon, config: typeObj };
+            }
+        }
+        food = newFood;
+    }
+
+    function move() {
+        const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+        // Wall Collision
+        if (head.x === 0 || head.x === GRID_SIZE - 1 || head.y === 0 || head.y === GRID_SIZE - 1) {
+            return gameOver();
+        }
+        // Self Collision
+        if (snake.some(s => s.x === head.x && s.y === head.y)) {
+            return gameOver();
+        }
+
+        snake.unshift(head);
+
+        // Check if food eaten
+        if (head.x === food.x && head.y === food.y) {
+            score += food.config ? food.config.points : 1;
+            scoreEl.innerText = score;
+            
+            // Handle different growth rates
+            let growth = food.config ? food.config.growth : 1;
+            for (let i = 1; i < growth; i++) {
+                snake.push({ ...snake[snake.length - 1] }); // Add extra body pieces
+            }
+            
+            spawnFood();
+        } else {
+            snake.pop();
+        }
+
+        draw();
+    }
+
+    function gameOver() {
+        clearInterval(gameInterval);
+        alert(`Game Over! Final Score: ${score}`);
+        // Reset
+        snake = [{x: 4, y: 4}];
+        direction = {x: 0, y: -1};
+        score = 0;
+        scoreEl.innerText = score;
+        spawnFood();
+        gameInterval = setInterval(move, 250);
+    }
+
+    // Input Handling
+    window.addEventListener('keydown', e => {
+        switch (e.key) {
+            case 'ArrowUp':    if (direction.y === 0) direction = { x: 0, y: -1 }; break;
+            case 'ArrowDown':  if (direction.y === 0) direction = { x: 0, y: 1 }; break;
+            case 'ArrowLeft':  if (direction.x === 0) direction = { x: -1, y: 0 }; break;
+            case 'ArrowRight': if (direction.x === 0) direction = { x: 1, y: 0 }; break;
+        }
+    });
+
+    // Start Game
+    createGrid();
+    spawnFood();
+    gameInterval = setInterval(move, 250); // Speed: 250ms per tick
+</script>
+</body>
+</html>
